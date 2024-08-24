@@ -1,0 +1,78 @@
+-- Looking at Total Deaths VS Total Cases
+select location , date , cast(total_deaths as int) as TotalDeath, cast(total_cases as int) as TotalCases, cast(total_deaths as float) / cast(total_cases as float) *100 as DeathPercentage
+from Portofolio..CovidDeaths
+where location like 'united states'
+order by date
+
+-- Looking at Total Cases VS Population
+select location ,  date , cast(total_cases as int) as TotalCases, population ,  (cast(total_cases as int) /population ) *100 as CovidPercentage
+from Portofolio..CovidDeaths
+where location = 'united states'
+order by date
+
+-- Looking at Highest CovidInfectionPercentage
+select location ,   max(cast(total_cases as int)) as HighestCases, max((cast(total_cases as int)) /population ) *100 as HighestInectionPercentage
+from Portofolio..CovidDeaths
+where continent is not null
+group by location
+
+order by HighestInectionPercentage desc
+
+-- Looking at Highest CovidDeathPercentage
+select location ,   max(cast(total_deaths as int)) as Highestdeaths, max(cast(total_deaths as float)) /max(cast(total_cases as float) ) *100 as HighestDeathPercentage
+from Portofolio..CovidDeaths
+where continent is not null
+group by location
+
+order by HighestDeathPercentage desc
+
+-- Looking at Highest CovidDeathCount for Each Continent
+select continent ,   max(cast(total_deaths as int)) as Highestdeaths
+from Portofolio..CovidDeaths
+where continent is not null
+group by continent
+
+order by Highestdeaths desc
+
+-- Looking at Total deaths and Total cases for Each Day
+select date  , sum(cast(new_cases as int)) as TotalCases , sum(cast(new_deaths as int)) as TotalDeaths
+from Portofolio..CovidDeaths
+where continent is not null
+group by date
+order by date
+
+-- Looking at GlobalNumber
+select  sum(new_cases) as TotalCases , sum(new_deaths) as TotalDeaths
+from Portofolio..CovidDeaths
+where continent is not null
+--group by date
+--order by date
+
+-- Looking at Total num of vaccation vs population
+select dea.continent , dea.location , dea.date , dea.population ,  vac.new_vaccinations ,
+sum (cast(vac.new_vaccinations as bigint)) 
+over ( partition by dea.location order by dea.location , dea.date ROWS UNBOUNDED PRECEDING) as RollingupVaccinatedPeople
+from Portofolio..CovidDeaths dea
+join Portofolio..CovidVaccations vac
+	on dea.location = vac.location
+	and dea.date = vac.date
+where dea.continent is not null
+order by dea.location , dea.date
+
+-- Looking at Total % vaccation using CTE
+with PopvsVac (continent , location , date , population ,  new_vaccinations , RollingupVaccinatedPeople)
+as 
+(
+select dea.continent , dea.location , dea.date , dea.population ,  vac.new_vaccinations ,
+sum (cast(vac.new_vaccinations as bigint)) 
+over ( partition by dea.location order by dea.location , dea.date ROWS UNBOUNDED PRECEDING) as RollingupVaccinatedPeople
+from Portofolio..CovidDeaths dea
+join Portofolio..CovidVaccations vac
+	on dea.location = vac.location
+	and dea.date = vac.date
+where dea.continent is not null
+--order by dea.location , dea.date
+)
+select * , (RollingupVaccinatedPeople / population) *100 as vaccinatedPercent
+from popvsvac
+order by vaccinatedPercent desc
